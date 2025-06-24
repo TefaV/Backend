@@ -1,0 +1,39 @@
+# Usa una imagen oficial de PHP con Apache
+FROM php:8.2-apache
+
+# Instalar extensiones necesarias
+RUN apt-get update && apt-get install -y \
+    libpng-dev \
+    zip \
+    unzip \
+    git \
+    curl \
+    libonig-dev \
+    libxml2-dev \
+    libsqlite3-dev \
+    sqlite3 \
+    && docker-php-ext-install pdo pdo_sqlite mbstring gd
+
+# Instala Composer globalmente
+RUN curl -sS https://getcomposer.org/installer | php -- --install-dir=/usr/local/bin --filename=composer
+
+# Establece el directorio de trabajo
+WORKDIR /var/www/html
+
+# Copia el proyecto completo al contenedor
+COPY . .
+
+# Asegura permisos para Laravel
+RUN chmod -R 777 storage bootstrap/cache
+
+# Instala dependencias con Composer
+RUN COMPOSER_ALLOW_SUPERUSER=1 composer install --no-dev --optimize-autoloader
+
+# Genera la clave de la app y crea la base de datos SQLite
+RUN touch database/database.sqlite && php artisan key:generate
+
+# Expone el puerto de Apache
+EXPOSE 80
+
+# Comando para iniciar Apache
+CMD ["apache2-foreground"]
